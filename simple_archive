@@ -1,0 +1,142 @@
+#!/bin/bash
+
+# Simple script that uses rsync to archive directories.  Simple configuration
+# files are looked for in ~/.conf_archive/ to define paired source and
+# destination directories.
+
+if [[ $1 == '-d' || $1 == '--debug' ]]; then
+    DEBUG='T'
+fi
+
+START_TIME=$(date "+%Y.%m.%d.%H.%M.%S")
+
+CMD_BNAME=$(basename $0)
+
+CONF_DIR="${HOME}/.conf_${CMD_BNAME}"
+CONF_FILE="${CONF_DIR}/conf"
+LOG_OPTION=''
+
+function decho {
+    # Simple function to log statements if DEBUG is defined and has text.
+    if [[ -n $DEBUG && -z $DEBUG_LOG ]]; then
+        echo $*
+    elif [[ -n $DEBUG ]]; then
+        echo $* >> $DEBUG_LOG
+    fi
+}
+
+function logit {
+    # Simple function to log statements to the app log.
+    if [[ -z $LOG_DIR ]]; then
+        APP_LOG=/dev/stdout
+    fi
+    echo $* >> $APP_LOG
+}
+
+function cleanup_logs {
+    # Capture the list of files for the archive name in to an array.  The order
+    # of the list is based on "reverse time" from ls (oldest first).  The number
+    # of entries that should be kept is determined by the LOGS_PER_ARCH variable
+    # which should be set in ~/.conf_archive/conf.
+    if [[ -z ${LOG_DIR} || -z ${LOGS_PER_ARCH} ]]; then
+        return 0
+    fi
+
+    arch_name=$1
+    logs=($(ls -1rt ${LOG_DIR}/${arch_name}* 2> /dev/null))
+    diff=$(( ${#logs[*]} - $LOGS_PER_ARCH ))
+
+    decho '-- Cleanup:'
+    decho '--- Number of logs: ' ${#logs[*]}
+    decho '--- Number wanted:   ' $LOGS_PER_ARCH
+    decho '--- Diff: ' $(( ${#logs[*]} - $LOGS_PER_ARCH ))
+    if [[ $diff -le 0 ]]; then
+        decho '--- No cleanup for ' $arch_name
+    elif [[ -n `decho test output` ]]; then
+        # This block should only happen if DEBUG is enabled.
+    
+        decho '--- First' $diff 'entries:'
+        for f in ${logs[*]:0:$diff};
+        do
+            decho '----' $f
+        done
+
+        decho '--- Last entries:'
+        for f in ${logs[*]:$diff};
+        do
+            decho '----' $f
+        done
+        decho
+    else
+        # Remove files 
+        for f in ${logs[*]:0:$diff};
+        do
+            logit 'Removing: ' $(rm -v $f)
+        done
+    fi
+}
+
+if [[ ! -d ${CONF_DIR} ]]; then
+    echo 'No configuration directory found!'
+    exit 1
+fi
+
+if [[ -f ${CONF_FILE} ]]; then
+    source ${CONF_FILE}
+    if [[ -n ${LOG_DIR} ]]; then
+        if [[ ! -d ${LOG_DIR} ]]; then
+            mkdir -p ${LOG_DIR}
+        fi
+        DEBUG_LOG="${LOG_DIR}/debug_${START_TIME}.log"
+        APP_LOG="${LOG_DIR}/app_${START_TIME}.log"
+    fi
+fi
+
+RSYNC_CMD="rsync --archive --delete --delete-excluded"
+
+EXCLUDE_FILE="${CONF_DIR}/excludes"
+if [[ -f ${EXCLUDE_FILE} ]]; then
+    RSYNC_CMD+=" --exclude-from=${EXCLUDE_FILE}"
+fi
+
+decho 'DEBUG: enabled.'
+
+for arch_file in `ls -1 ${CONF_DIR}/arch* 2> /dev/null`
+do
+    decho '- arch_file: ' $arch_file
+    unset SRC DST
+    source $arch_file
+    bname=$(basename $arch_file)
+
+    if [[ -z $SRC || -z $DST ]]; then
+        decho " -- Skipping $arch_file"
+        continue
+    fi
+
+    if [[ -n ${LOG_DIR} ]]; then
+        LOG_FILE="$bname"
+        LOG_FILE+="_$START_TIME"
+        LOG_FILE+=".log"
+        LOG_OPTION="--log-file=${LOG_DIR}/${LOG_FILE}"
+    fi
+
+
+    decho '-- LOG_FILE: ' $LOG_FILE
+    decho '-- RSYNC_CMD: ' $RSYNC_CMD
+    decho '-- LOG_OPTION: ' $LOG_OPTION
+    decho "-- SRC: ${SRC}"
+    decho "-- DST: ${DST}"
+    if [[ -z ${DEBUG} ]]; then
+        logit 'Running archive for' $bname
+        $RSYNC_CMD ${LOG_OPTION} $SRC $DST
+    fi
+    cleanup_logs $bname
+done
+
+if [[ -z ${DEBUG} ]]; then
+    logit 'Cleaning up logs.'
+fi
+decho '- Call for app log cleanup.'
+cleanup_logs app
+decho '- Call for debug log cleanup.'
+cleanup_logs debug

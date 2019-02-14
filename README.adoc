@@ -1,0 +1,59 @@
+= Simple Archive Script (uses rsync) 
+:toc:
+
+Creating backups can be a pain.  This script was put together to help keep
+an archive of specific data in a seperate location than my normal backup
+routine.  Why?
+
+* All hardware fails eventually -- even the one(s) backups are written to.
+* Simple mistakes can lead to backups becoming useless.
+
+Ideally this should work on OS X and Linux (not currently tested).
+
+== Why rsync?
+
+It's a reliable tool that is readily available on Linux and OS X.  No need to
+re-invent the wheel.  This script simply makes it easier to add directories as
+needed.
+
+== How Simple is It?
+
+* One "archive" file for each "pair" of directories (source and destination).
+* Optional single configuration file that only cares about logging, and applies
+    to all pairs.
+* Optional single "excludes" file for rsync that is applied to all pairs.
+
+== So, What is Required?
+
+The only real requirement is that the configuration directory
+('~/.conf_simple_archive') exists for the script to run.  To create a directory
+pair, simple create a bash snippit in a file that starts with 'arch_' in this
+directory.
+
+.'~/.conf_simple_archive' example.
+[source, bash]
+----
+SRC="/path/to/important/files/"
+DST="/path/to/backup/location/for/important/files/"
+----
+
+WARNING:: Remember that that trailing slash is important to the way that rsync
+          works.
+
+== Logs
+
+There are two variables that the script will use if they exist in the
+configuration file.
+
+.'~/.conf_simple_archive/conf' example.
+[source, bash]
+----
+LOG_DIR="/path/to/store/log/files"
+LOGS_PER_ARCH=25
+----
+
+The directory will be created if it does not already exist, and log files will
+be stored here indefinitely by default.
+
+The LOGS_PER_ARCH variable determines how many logs to keep in this directory.
+
