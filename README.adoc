@@ -30,7 +30,7 @@ The only real requirement is that the configuration directory
 pair, simple create a bash snippit in a file that starts with 'arch_' in this
 directory.
 
-.'~/.conf_simple_archive' example.
+.'~/.conf_simple_archive/arch_example' example.
 [source, bash]
 ----
 SRC="/path/to/important/files/"
@@ -39,6 +39,9 @@ DST="/path/to/backup/location/for/important/files/"
 
 WARNING:: Remember that that trailing slash is important to the way that rsync
           works.
+
+NOTE:: A third variable (MNT_CHECK) can be used to determine that an external
+        source is mounted.
 
 == Logs
 
@@ -56,4 +59,24 @@ The directory will be created if it does not already exist, and log files will
 be stored here indefinitely by default.
 
 The LOGS_PER_ARCH variable determines how many logs to keep in this directory.
+
+== Example on Mac.
+
+There is an example under examples/mac that includes:
+
+* A
+    https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html[Launch Agent]
+    that will run every two hours.
+* Using the 'MNT_CHECK' variable to see if an external volume is mounted.
+* Logging to your home directory.
+
+Note that to enable the 'Launch Agent' the following command will need to be
+used once the file is in place.  This will not run the script immediately.
+Instead it will be scheduled to run in two hours -- as defined by StartInterval.
+
+.Enable Launch Agent.
+[source, console]
+----
+$ launchctl load Library/LaunchAgents/local.simple_archive.plist
+----
 

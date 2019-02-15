@@ -104,9 +104,14 @@ decho 'DEBUG: enabled.'
 for arch_file in `ls -1 ${CONF_DIR}/arch* 2> /dev/null`
 do
     decho '- arch_file: ' $arch_file
-    unset SRC DST
+    unset SRC DST MNT_CHECK
     source $arch_file
     bname=$(basename $arch_file)
+
+    if [[ -n $MNT_CHECK && ! -f $MNT_CHECK ]]; then
+        decho " -- Skipping $arch_file since mount check file missing."
+        continue
+    fi
 
     if [[ -z $SRC || -z $DST ]]; then
         decho " -- Skipping $arch_file"
