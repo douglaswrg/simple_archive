@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Simple script that uses rsync to archive directories.  Simple configuration
-# files are looked for in ~/.conf_archive/ to define paired source and
+# files are looked for in ~/.conf_simple_archive/ to define paired source and
 # destination directories.
+#
+# Note that if the script is linked to a different name, the configuration
+# directory will change to reflect the new name.
 
 if [[ $1 == '-d' || $1 == '--debug' ]]; then
     DEBUG='T'
